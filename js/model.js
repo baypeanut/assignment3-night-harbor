@@ -9,6 +9,88 @@
   const lerp = (a, b, t) => a + (b - a) * t;
   const neutralInput = () => ({ x: 0, y: 0, brake: false, interact: false, target: null });
 
+  function navigationObstacles(buoys) {
+    return buoys.map(buoy => ({
+      left: buoy.baseX - buoy.radius - 79,
+      right: buoy.baseX + buoy.radius + 79,
+      top: buoy.baseY - buoy.radius - 35,
+      bottom: buoy.baseY + buoy.radius + 35
+    }));
+  }
+
+  function inside(point, obstacle) {
+    return point.x > obstacle.left && point.x < obstacle.right && point.y > obstacle.top && point.y < obstacle.bottom;
+  }
+
+  function clearSegment(a, b, obstacles) {
+    return obstacles.every(obstacle => {
+      let entry = 0;
+      let exit = 1;
+      for (const [origin, delta, low, high] of [[a.x, b.x - a.x, obstacle.left, obstacle.right], [a.y, b.y - a.y, obstacle.top, obstacle.bottom]]) {
+        if (Math.abs(delta) < 1e-9) {
+          if (origin <= low || origin >= high) return true;
+        } else {
+          const first = (low - origin) / delta;
+          const last = (high - origin) / delta;
+          entry = Math.max(entry, Math.min(first, last));
+          exit = Math.min(exit, Math.max(first, last));
+          if (entry >= exit) return true;
+        }
+      }
+      return entry >= exit;
+    });
+  }
+
+  function safeDestination(point, obstacles) {
+    let result = { x: clamp(point.x, 72, WIDTH - 72), y: clamp(point.y, 444, HEIGHT - 38) };
+    for (const obstacle of obstacles) {
+      if (!inside(result, obstacle)) continue;
+      const choices = [
+        { x: obstacle.left - 3, y: result.y },
+        { x: obstacle.right + 3, y: result.y },
+        { x: result.x, y: obstacle.top - 3 },
+        { x: result.x, y: obstacle.bottom + 3 }
+      ].filter(candidate => candidate.x >= 72 && candidate.x <= WIDTH - 72 && candidate.y >= 444 && candidate.y <= HEIGHT - 38 && !obstacles.some(other => inside(candidate, other)));
+      choices.sort((a, b) => Math.hypot(a.x - result.x, a.y - result.y) - Math.hypot(b.x - result.x, b.y - result.y));
+      if (choices.length) result = choices[0];
+    }
+    return result;
+  }
+
+  function planRoute(start, destination, obstacles) {
+    const safeStart = safeDestination(start, obstacles);
+    const target = safeDestination(destination, obstacles);
+    const points = [safeStart, target];
+    for (const obstacle of obstacles) {
+      for (const x of [obstacle.left - 3, obstacle.right + 3]) {
+        for (const y of [obstacle.top - 3, obstacle.bottom + 3]) {
+          if (x >= 72 && x <= WIDTH - 72 && y >= 444 && y <= HEIGHT - 38 && !obstacles.some(other => inside({ x, y }, other))) points.push({ x, y });
+        }
+      }
+    }
+    const costs = points.map(() => Infinity);
+    const parents = points.map(() => -1);
+    const visited = new Set();
+    costs[0] = 0;
+    for (let step = 0; step < points.length; step++) {
+      let current = -1;
+      for (let i = 0; i < points.length; i++) if (!visited.has(i) && (current < 0 || costs[i] < costs[current])) current = i;
+      if (current < 0 || !Number.isFinite(costs[current])) break;
+      if (current === 1) break;
+      visited.add(current);
+      for (let next = 0; next < points.length; next++) {
+        if (visited.has(next) || !clearSegment(points[current], points[next], obstacles)) continue;
+        const cost = costs[current] + Math.hypot(points[current].x - points[next].x, points[current].y - points[next].y);
+        if (cost < costs[next]) { costs[next] = cost; parents[next] = current; }
+      }
+    }
+    if (!Number.isFinite(costs[1])) return [];
+    const route = [];
+    for (let current = 1; current > 0; current = parents[current]) route.unshift(points[current]);
+    if (Math.hypot(start.x - safeStart.x, start.y - safeStart.y) > 1) route.unshift(safeStart);
+    return route;
+  }
+
   class HarborModel {
     constructor(seed = 202609) {
       this.seed = seed >>> 0;
@@ -42,6 +124,7 @@
       ];
       this.smoke = [];
       this.wake = [];
+      this.navigation = null;
       this.previous = this.captureVisual();
     }
 
@@ -127,9 +210,26 @@
       let axisX = clamp(Number(input.x) || 0, -1, 1);
       let axisY = clamp(Number(input.y) || 0, -1, 1);
       const manual = axisX !== 0 || axisY !== 0;
-      if (!manual && input.target) {
-        axisX = clamp((input.target.x - boat.x) * 0.045 - boat.vx * 0.025, -1, 1);
-        axisY = clamp((input.target.y - boat.y) * 0.045 - boat.vy * 0.025, -1, 1);
+      let navigationBrake = false;
+      if (manual || input.brake || !input.target) this.navigation = null;
+      if (!manual && !input.brake && input.target) {
+        if (!this.navigation || this.navigation.request.x !== input.target.x || this.navigation.request.y !== input.target.y) {
+          this.navigation = { request: { ...input.target }, route: planRoute(boat, input.target, navigationObstacles(this.buoys)), index: 0, blocked: false };
+        }
+        const navigation = this.navigation;
+        let waypoint = navigation.route[navigation.index];
+        if (waypoint && Math.hypot(waypoint.x - boat.x, waypoint.y - boat.y) < 5 && Math.hypot(boat.vx, boat.vy) < 18 && navigation.index < navigation.route.length - 1) waypoint = navigation.route[++navigation.index];
+        if (waypoint && !navigation.blocked) {
+          const dx = waypoint.x - boat.x;
+          const dy = waypoint.y - boat.y;
+          const distance = Math.hypot(dx, dy);
+          const speed = Math.min(125, distance * 2.5);
+          const desiredX = distance > 0.01 ? dx / distance * speed : 0;
+          const desiredY = distance > 0.01 ? dy / distance * speed : 0;
+          const acceleration = boat.cargo === null ? 235 : 205;
+          axisX = clamp((desiredX - boat.vx) * 0.06 + desiredX * 1.05 / acceleration, -1, 1);
+          axisY = clamp((desiredY - boat.vy) * 0.06 + desiredY * 1.05 / acceleration, -1, 1);
+        } else navigationBrake = true;
       }
       const length = Math.hypot(axisX, axisY);
       if (length > 1) {
@@ -137,7 +237,7 @@
         axisY /= length;
       }
       const acceleration = boat.cargo === null ? 235 : 205;
-      const drag = input.brake ? 7.5 : 1.05;
+      const drag = input.brake || navigationBrake ? 7.5 : 1.05;
       boat.vx = (boat.vx + axisX * acceleration * dt) * Math.exp(-drag * dt);
       boat.vy = (boat.vy + axisY * acceleration * dt) * Math.exp(-drag * dt);
       const speed = Math.hypot(boat.vx, boat.vy);
@@ -174,6 +274,7 @@
         const ry = 15 + buoy.radius;
         const distance = Math.hypot(dx / rx, dy / ry);
         if (distance < 1) {
+          if (this.navigation) this.navigation.blocked = true;
           const normalX = distance > 0.001 ? dx / rx / distance : 1;
           const normalY = distance > 0.001 ? dy / ry / distance : 0;
           boat.x = buoy.x + normalX * (rx + 1);

@@ -49,3 +49,53 @@ assert.equal(ticks, 300);
 engine.synchronize(100000); engine.advance(100000);
 assert.equal(ticks, 300);
 console.log("PASS: boundaries, bounded particles, render purity, pickup, delivery, docking speed, win, timeout, collision, catch-up, pause synchronization.");
+
+function sail(model, target, tape) {
+  for (let tick = 0; tick < 1800; tick++) {
+    const controls = { ...neutralInput(), target: { ...target } };
+    model.update(1 / 60, controls);
+    tape.push(controls);
+    assert.equal(model.boat.health, 100, "Navigation must avoid buoy damage");
+    assert.equal(model.status, "playing", "Voyage must remain playable");
+    if (Math.hypot(model.boat.x - target.x, model.boat.y - target.y) < 5 && Math.hypot(model.boat.vx, model.boat.vy) < 18) return;
+  }
+  assert.fail("Navigation did not reach its destination");
+}
+
+let completeTape;
+for (const order of [[1, 2, 3], [1, 3, 2], [2, 1, 3], [2, 3, 1], [3, 1, 2], [3, 2, 1]]) {
+  for (const delay of [0, 227, 619]) {
+    const voyage = new HarborModel();
+    const tape = [];
+    for (let tick = 0; tick < delay; tick++) { const controls = neutralInput(); voyage.update(1 / 60, controls); tape.push(controls); }
+    for (const id of order) {
+      const cargo = voyage.cargo[id - 1];
+      sail(voyage, { x: cargo.x, y: cargo.y }, tape);
+      const pickup = { ...neutralInput(), interact: true };
+      voyage.update(1 / 60, pickup); tape.push(pickup);
+      assert.equal(voyage.boat.cargo, id);
+      sail(voyage, { x: voyage.dock.x, y: voyage.dock.y }, tape);
+      const unload = { ...neutralInput(), interact: true };
+      voyage.update(1 / 60, unload); tape.push(unload);
+      assert.equal(voyage.boat.cargo, null);
+    }
+    assert.equal(voyage.status, "won");
+    assert.equal(voyage.delivered, 3);
+    assert.equal(voyage.collisions, 0);
+    assert.equal(voyage.boat.health, 100);
+    completeTape = tape;
+  }
+}
+assert.equal(verifyTiming(completeTape).passed, true);
+for (const target of [{ x: 593, y: 473 }, { x: 855, y: 568 }, { x: 356, y: 595 }, { x: -100, y: -100 }, { x: 2000, y: 2000 }]) {
+  const voyage = new HarborModel();
+  for (let tick = 0; tick < 1800; tick++) voyage.update(1 / 60, { ...neutralInput(), target });
+  assert.equal(voyage.boat.health, 100, "Blocked or out-of-bounds destinations must remain safe");
+  assert.ok(voyage.boat.x >= 72 && voyage.boat.x <= 1128 && voyage.boat.y >= 444 && voyage.boat.y <= 642);
+}
+const override = new HarborModel();
+override.update(1 / 60, { ...neutralInput(), target: { x: 988, y: 478 } });
+assert.ok(override.navigation);
+override.update(1 / 60, { ...neutralInput(), x: -1 });
+assert.equal(override.navigation, null);
+console.log("PASS: 18 full voyages, all six delivery orders, varying buoy phases, zero damage, safe blocked targets, manual override, complete voyage replay at all five frame schedules.");

@@ -160,7 +160,15 @@ class HarborRenderer {
     }
     for (const puff of model.smoke) { c.save(); c.globalAlpha = Math.max(0, puff.life / 1.8) * 0.3; this.circle(Harbor.lerp(puff.px, puff.x, alpha), Harbor.lerp(puff.py, puff.y, alpha), puff.size, "#c0ced0"); c.restore(); }
     this.boat(view.boat, time);
-    if (target) { c.save(); c.strokeStyle = "#b7d9ce88"; c.setLineDash([3, 5]); c.beginPath(); c.arc(target.x, target.y, 14, 0, Math.PI * 2); c.stroke(); c.restore(); }
+    if (target && model.navigation && !model.navigation.blocked) {
+      const route = model.navigation.route.slice(model.navigation.index);
+      c.save(); c.strokeStyle = "#b7d9ce66"; c.setLineDash([3, 5]); c.beginPath(); c.moveTo(view.boat.x, view.boat.y);
+      for (const point of route) c.lineTo(point.x, point.y);
+      c.stroke();
+      const destination = route[route.length - 1];
+      if (destination) { c.beginPath(); c.arc(destination.x, destination.y, 14, 0, Math.PI * 2); c.stroke(); }
+      c.restore();
+    }
     c.textAlign = "left";
   }
 }
