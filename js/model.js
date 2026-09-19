@@ -133,6 +133,25 @@
       }
       boat.x = clamp(boat.x, 72, WIDTH - 72);
       boat.y = clamp(boat.y, 444, HEIGHT - 38);
+      for (const puff of this.smoke) {
+        puff.px = puff.x;
+        puff.py = puff.y;
+        puff.x += puff.vx * dt;
+        puff.y += puff.vy * dt;
+        puff.life -= dt;
+        puff.size += 3.8 * dt;
+      }
+      this.smoke = this.smoke.filter(puff => puff.life > 0);
+      if (this.tick % 9 === 0) {
+        const x = boat.x + boat.heading * 20;
+        const y = boat.y - 44;
+        this.smoke.push({ x, y, px: x, py: y, vx: -12 + this.random() * 8, vy: -24 - this.random() * 9, life: 1.8, size: 3 + this.random() * 3 });
+      }
+      for (const wake of this.wake) wake.life -= dt;
+      this.wake = this.wake.filter(wake => wake.life > 0);
+      if (this.tick % 5 === 0 && Math.hypot(boat.vx, boat.vy) > 18) {
+        this.wake.push({ x: boat.x - boat.heading * 45, y: boat.y + 12, life: 1.2 });
+      }
       if (boat.health <= 0 || this.remaining <= 0) this.status = "lost";
     }
 
