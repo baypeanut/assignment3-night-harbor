@@ -51,7 +51,50 @@ class HarborRenderer {
     c.fillStyle = color; c.beginPath(); c.arc(x, y, radius, 0, Math.PI * 2); c.fill();
   }
 
+  lighthouse(light) {
+    const c = this.ctx;
+    c.save(); c.translate(light.x, light.y);
+    c.fillStyle = "#253640"; c.fillRect(-18, -139, 36, 139);
+    c.fillStyle = "#d1d6ca";
+    for (let i = 0; i < 6; i++) c.fillRect(-18, -130 + i * 23, 36, 10);
+    c.fillStyle = "#d9b565"; c.beginPath(); c.moveTo(-25, -139); c.lineTo(0, -165); c.lineTo(25, -139); c.fill();
+    c.save(); c.translate(0, -127); c.rotate(light.beamAngle);
+    const beam = c.createLinearGradient(0, 0, 310, 0);
+    beam.addColorStop(0, "#ffe9aa69"); beam.addColorStop(1, "#ffe9aa00");
+    c.fillStyle = beam; c.beginPath(); c.moveTo(0, 0); c.lineTo(310, -65); c.lineTo(310, 65); c.fill();
+    c.restore(); this.circle(0, -127, 9, "#fae8a7"); c.restore();
+  }
+
+  turbine(turbine) {
+    const c = this.ctx;
+    c.save(); c.translate(turbine.x, turbine.y); c.scale(turbine.scale, turbine.scale);
+    c.fillStyle = "#859da4"; c.fillRect(-5, -132, 10, 132);
+    c.save(); c.translate(0, -132); c.rotate(turbine.bladeAngle); c.fillStyle = "#d1e0dd";
+    for (let i = 0; i < 3; i++) {
+      c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(10, -24, 4, -73); c.quadraticCurveTo(-3, -25, 0, 0); c.fill(); c.rotate(Math.PI * 2 / 3);
+    }
+    this.circle(0, 0, 7, "#d9b565"); c.restore(); c.restore();
+  }
+
+  crane(crane) {
+    const c = this.ctx;
+    c.save(); c.translate(crane.x, crane.y); c.scale(-1, 1);
+    c.fillStyle = "#596871"; c.fillRect(-12, -111, 24, 111); c.fillRect(-40, -9, 80, 13);
+    c.save(); c.translate(0, -111); c.rotate(crane.boomAngle);
+    c.fillStyle = "#c3a45b"; c.fillRect(-30, -13, 175, 14);
+    c.strokeStyle = "#857647"; c.lineWidth = 2;
+    for (let x = -20; x < 140; x += 20) { c.beginPath(); c.moveTo(x, -13); c.lineTo(x + 10, 1); c.lineTo(x + 20, -13); c.stroke(); }
+    c.save(); c.translate(138, 0); c.rotate(crane.hookSwing - crane.boomAngle);
+    c.strokeStyle = "#c8d2cc"; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, crane.cableLength); c.stroke();
+    c.strokeStyle = "#dc9170"; c.lineWidth = 4; c.beginPath(); c.arc(0, crane.cableLength + 5, 7, -Math.PI / 2, Math.PI); c.stroke();
+    c.restore(); c.restore(); c.restore();
+  }
+
   draw(model, alpha) {
+    const view = model.visual(alpha);
     this.ctx.drawImage(this.background, 0, 0);
+    this.lighthouse(view.lighthouse);
+    for (const turbine of view.turbines) this.turbine(turbine);
+    this.crane(view.crane);
   }
 }
