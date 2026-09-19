@@ -78,6 +78,44 @@
       return next ? "Collect any gold cargo marker with E. Avoid the red channel buoys." : "All cargo is delivered.";
     }
 
+    interact() {
+      const boat = this.boat;
+      if (boat.cargo !== null) {
+        if (Math.hypot(boat.x - this.dock.x, boat.y - this.dock.y) > this.dock.radius) {
+          this.notify("Return to the green berth to unload.");
+        } else if (Math.hypot(boat.vx, boat.vy) > 45) {
+          this.notify("Too fast to dock. Hold Space to brake.");
+        } else {
+          this.cargo.find(cargo => cargo.id === boat.cargo).state = "delivered";
+          boat.cargo = null;
+          this.delivered += 1;
+          this.score += 1000;
+          this.notify("Delivery secured. " + this.delivered + " of 3 shipments home.");
+          if (this.delivered === 3) {
+            this.status = "won";
+            this.score += Math.floor(this.remaining) * 10 + boat.health * 5;
+          }
+        }
+        return;
+      }
+      let closest = null;
+      let distance = 64;
+      for (const cargo of this.cargo) {
+        const current = Math.hypot(boat.x - cargo.x, boat.y - cargo.y);
+        if (cargo.state === "waiting" && current < distance) {
+          closest = cargo;
+          distance = current;
+        }
+      }
+      if (closest) {
+        closest.state = "aboard";
+        boat.cargo = closest.id;
+        this.notify(closest.name + " aboard. Return to the green berth.");
+      } else {
+        this.notify("Move closer to a gold cargo marker to collect it.");
+      }
+    }
+
     update(dt, input = neutralInput()) {
       if (this.status !== "playing") return;
       this.previous = this.captureVisual();
@@ -172,6 +210,7 @@
         this.wake.push({ x: boat.x - boat.heading * 45, y: boat.y + 12, life: 1.2 });
       }
       if (boat.health <= 0 || this.remaining <= 0) this.status = "lost";
+      else if (input.interact) this.interact();
     }
 
     visual(alpha) {
