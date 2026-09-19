@@ -130,6 +130,25 @@
       for (const buoy of this.buoys) {
         buoy.x = buoy.baseX + Math.sin(this.time * 0.55 + buoy.phase) * 24;
         buoy.y = buoy.baseY + Math.sin(this.time * 0.8 + buoy.phase) * 8;
+        const dx = boat.x - buoy.x;
+        const dy = boat.y - buoy.y;
+        const rx = 43 + buoy.radius;
+        const ry = 15 + buoy.radius;
+        const distance = Math.hypot(dx / rx, dy / ry);
+        if (distance < 1) {
+          const normalX = distance > 0.001 ? dx / rx / distance : 1;
+          const normalY = distance > 0.001 ? dy / ry / distance : 0;
+          boat.x = buoy.x + normalX * (rx + 1);
+          boat.y = buoy.y + normalY * (ry + 1);
+          boat.vx = normalX * 45;
+          boat.vy = normalY * 45;
+          if (boat.invulnerable === 0) {
+            boat.health = Math.max(0, boat.health - 16);
+            boat.invulnerable = 1.5;
+            this.collisions += 1;
+            this.notify("Channel buoy struck. Hull damaged. Steer clear of the red lights.");
+          }
+        }
       }
       boat.x = clamp(boat.x, 72, WIDTH - 72);
       boat.y = clamp(boat.y, 444, HEIGHT - 38);
