@@ -78,7 +78,54 @@
       return next ? "Collect any gold cargo marker with E. Avoid the red channel buoys." : "All cargo is delivered.";
     }
 
-    update() {}
+    update(dt, input = neutralInput()) {
+      if (this.status !== "playing") return;
+      this.previous = this.captureVisual();
+      this.tick += 1;
+      this.time = this.tick / RATE;
+      this.remaining = Math.max(0, DURATION - this.time);
+      this.messageTicks = Math.max(0, this.messageTicks - 1);
+      const boat = this.boat;
+      let axisX = clamp(Number(input.x) || 0, -1, 1);
+      let axisY = clamp(Number(input.y) || 0, -1, 1);
+      const manual = axisX !== 0 || axisY !== 0;
+      if (!manual && input.target) {
+        axisX = clamp((input.target.x - boat.x) * 0.045 - boat.vx * 0.025, -1, 1);
+        axisY = clamp((input.target.y - boat.y) * 0.045 - boat.vy * 0.025, -1, 1);
+      }
+      const length = Math.hypot(axisX, axisY);
+      if (length > 1) {
+        axisX /= length;
+        axisY /= length;
+      }
+      const acceleration = boat.cargo === null ? 235 : 205;
+      const drag = input.brake ? 7.5 : 1.05;
+      boat.vx = (boat.vx + axisX * acceleration * dt) * Math.exp(-drag * dt);
+      boat.vy = (boat.vy + axisY * acceleration * dt) * Math.exp(-drag * dt);
+      const speed = Math.hypot(boat.vx, boat.vy);
+      const maxSpeed = boat.cargo === null ? 205 : 172;
+      if (speed > maxSpeed) {
+        boat.vx *= maxSpeed / speed;
+        boat.vy *= maxSpeed / speed;
+      }
+      boat.x += boat.vx * dt;
+      boat.y += boat.vy * dt;
+      if (boat.x < 72 || boat.x > WIDTH - 72) {
+        boat.x = clamp(boat.x, 72, WIDTH - 72);
+        boat.vx = 0;
+      }
+      if (boat.y < 444 || boat.y > HEIGHT - 38) {
+        boat.y = clamp(boat.y, 444, HEIGHT - 38);
+        boat.vy = 0;
+      }
+      if (Math.abs(boat.vx) > 12) boat.heading = boat.vx > 0 ? 1 : -1;
+      boat.wheelAngle += Math.hypot(boat.vx, boat.vy) * dt / 13;
+      boat.flagPhase += dt * 5.2;
+      boat.invulnerable = Math.max(0, boat.invulnerable - dt);
+      boat.x = clamp(boat.x, 72, WIDTH - 72);
+      boat.y = clamp(boat.y, 444, HEIGHT - 38);
+      if (boat.health <= 0 || this.remaining <= 0) this.status = "lost";
+    }
 
     visual(alpha) {
       const blend = (previous, current, keys) => {
