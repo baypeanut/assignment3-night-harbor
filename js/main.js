@@ -23,6 +23,8 @@
   let dirty = true;
   let maxCatchUp = 0;
   let lastMessage = "";
+  let traceTicks = 0;
+  let traceFrames = 0;
   const mappedKeys = new Set(["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowLeft", "ArrowDown", "ArrowRight", "Space", "KeyE", "KeyP", "Escape"]);
 
   function input() {
@@ -48,6 +50,10 @@
     const controls = replaying ? savedRecording[replayIndex++] : input();
     if (!replaying) recording.push(controls);
     model.update(dt, controls);
+    if (element("console-trace").checked && traceTicks < 120) {
+      console.log("tick: " + model.tick + " boat.x: " + model.boat.x + " boat.y: " + model.boat.y);
+      traceTicks += 1;
+    }
     sampleUpdates += 1;
     if (model.status !== "playing") finish();
     return true;
@@ -83,6 +89,8 @@
     element("pause").textContent = "Pause";
     lastRender = -Infinity;
     currentAlpha = 1;
+    traceTicks = 0;
+    traceFrames = 0;
     sampleFrames = 0;
     sampleUpdates = 0;
     lastSample = performance.now();
@@ -153,6 +161,10 @@
     if (dirty || (mode === "playing" && timestamp - lastRender + 0.1 >= interval)) {
       const alpha = mode === "playing" && element("interpolation").checked ? currentAlpha : 1;
       renderer.draw(model, alpha, target);
+      if (mode === "playing" && element("console-trace").checked && traceTicks <= 120) {
+        console.log("frame: " + ++traceFrames + " tick: " + model.tick);
+        if (traceTicks === 120) traceTicks = 121;
+      }
       updateInterface();
       sampleFrames += 1;
       if (interval && Number.isFinite(lastRender)) lastRender = timestamp - ((timestamp - lastRender) % interval);
@@ -192,6 +204,11 @@
   element("interact").addEventListener("click", () => { if (mode === "playing" && !replaying) actionPending = true; canvas.focus({ preventScroll: true }); });
   element("fps-limit").addEventListener("change", event => { renderLimit = Number(event.target.value); lastRender = -Infinity; dirty = true; });
   element("interpolation").addEventListener("change", () => { dirty = true; });
+  element("console-trace").addEventListener("change", () => {
+    traceTicks = 0;
+    traceFrames = 0;
+    if (element("console-trace").checked) console.log("Fixed simulation step: 1/60 second. Replay the same voyage at different render limits to compare tick positions.");
+  });
   element("replay").addEventListener("click", () => {
     if (recording.length) savedRecording = recording.slice();
     if (savedRecording.length) start(true);
@@ -204,6 +221,7 @@
       try {
         const tape = recording.length ? recording : savedRecording.length ? savedRecording : null;
         const result = HarborVerification.verifyTiming(tape);
+        console.table(result.results);
         element("verification-result").textContent = result.passed ? "PASS. Every simulation state matched at every tick across all five schedules." : "FAIL. A simulation mismatch was detected.";
         element("verification-detail").textContent = result.results.map(row => row.schedule + ": " + row.ticks + " ticks, " + (row.passed ? "identical" : "mismatch at " + row.mismatch)).join("\n");
       } catch (error) {
@@ -221,5 +239,6 @@
     button.addEventListener("pointercancel", release);
     button.addEventListener("lostpointercapture", release);
   });
+  console.info("Night Harbor ready. Open Engine room for render limits, console timing traces, deterministic verification, and voyage replay.");
   requestAnimationFrame(frame);
 })();
