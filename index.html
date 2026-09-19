@@ -3,57 +3,58 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#091a24">
-  <title>Night Harbor | The Cargo Run</title>
+  <meta name="theme-color" content="#0b1220">
+  <title>Night Harbor</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <main>
-    <header class="masthead">
-      <div class="brand"><span class="brand-mark" aria-hidden="true">NH</span><div><p class="eyebrow">A harbor after dark</p><h1>Night Harbor<span> / The Cargo Run</span></h1></div></div>
-      <div class="edition"><span class="status-dot"></span> NIGHT SHIFT <span class="edition-number">03</span></div>
-    </header>
+    <h1>Night Harbor</h1>
+    <p class="intro">Pick up the three crates and bring them back to the dock before time runs out.</p>
     <section class="game" aria-label="Night Harbor game">
       <div class="dashboard">
-        <div class="metric"><span>MANIFEST</span><strong id="manifest">0 <small>/ 3 delivered</small></strong></div>
-        <div class="metric"><span>UNTIL DAWN</span><strong id="timer">02:30</strong></div>
-        <div class="metric hull-metric"><span>HULL INTEGRITY</span><strong id="hull">100<small>%</small></strong><div class="hull-track"><div id="hull-fill"></div></div></div>
-        <div class="metric score-metric"><span>VOYAGE SCORE</span><strong id="score">0000</strong></div>
-        <button id="pause" class="quiet-button" disabled>Pause <kbd>P</kbd></button>
+        <span>Delivered: <strong id="manifest">0 / 3</strong></span>
+        <span>Time: <strong id="timer">02:30</strong></span>
+        <span>Hull: <strong id="hull">100%</strong></span>
+        <span>Score: <strong id="score">0</strong></span>
+        <button id="pause" disabled>Pause</button>
+        <button id="settings-open">Settings</button>
       </div>
       <div class="viewport">
-        <canvas id="scene" width="1200" height="680" tabindex="0" aria-label="Harbor playfield. Use WASD or arrow keys to steer, Space to brake, and E to collect or deliver cargo. You can also click a destination.">Your browser needs Canvas support to play Night Harbor.</canvas>
+        <canvas id="scene" width="1200" height="680" tabindex="0" aria-label="Harbor game. WASD or arrows to steer, Space to brake, E to pick up or deliver a crate. Click the water to set a destination.">Your browser needs Canvas support to play.</canvas>
         <div id="overlay" class="overlay">
           <div class="briefing">
-            <p class="eyebrow" id="overlay-eyebrow">YOUR NEXT SHIFT STARTS HERE</p>
-            <h2 id="overlay-title">Keep the harbor<br>moving.</h2>
-            <p id="overlay-copy">Three shipments. One tug. Before dawn.<br>Collect the gold cargo, avoid the red buoys, and bring everything back to the green berth.</p>
-            <button id="start" class="primary-button">Begin voyage <span aria-hidden="true">↗</span></button>
-            <p class="briefing-note" id="overlay-note">WASD to steer · Space to brake · E to load or unload</p>
+            <p id="overlay-eyebrow" hidden></p>
+            <h2 id="overlay-title">Ready to start?</h2>
+            <p id="overlay-copy">Collect the gold crates, then return to the green circle on the left. Slow down before unloading and watch out for the red buoys.</p>
+            <button id="start">Start game</button>
+            <p id="overlay-note">WASD or arrows: move · Space: brake · E: pick up or deliver</p>
           </div>
         </div>
-        <div class="canvas-caption"><span>WEST BERTH</span><span>EST. 2026 / COASTAL OPERATIONS</span><span>EAST CHANNEL</span></div>
       </div>
-      <div class="dispatch"><span class="dispatch-label"><span class="status-dot"></span> HARBOR RADIO</span><p id="message" role="status" aria-live="polite">Your tug is ready at the west berth.</p><span id="cargo-status">HOLD EMPTY</span></div>
+      <p id="message" role="status" aria-live="polite">Your boat is at the dock.</p>
     </section>
-    <section class="controls" aria-label="Game controls">
-      <div class="control-guide"><div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>or arrows to steer</span></div><div><kbd>SPACE</kbd><span>brake</span></div><div><kbd>E</kbd><span>load / unload</span></div><div class="pointer-guide">Click the water to navigate</div></div>
-      <div class="action-buttons"><button id="interact">Load / unload <kbd>E</kbd></button><button id="restart" class="quiet-button">New voyage</button></div>
-    </section>
+    <div class="controls">
+      <p><kbd>WASD</kbd> / <kbd>Arrows</kbd> move &nbsp; <kbd>Space</kbd> brake &nbsp; <kbd>E</kbd> pick up / deliver &nbsp; <kbd>P</kbd> pause</p>
+      <p class="help">You can also click the water to choose a route around the buoys.</p>
+      <div class="buttons"><button id="interact">Pick up / deliver</button><button id="restart">Restart</button><span id="cargo-status">No crate aboard</span></div>
+    </div>
     <div class="touch-controls" aria-label="Touch steering">
       <button data-direction="left" aria-label="Steer left">←</button><button data-direction="up" aria-label="Steer up">↑</button><button data-direction="down" aria-label="Steer down">↓</button><button data-direction="right" aria-label="Steer right">→</button><button data-direction="brake">Brake</button>
     </div>
-    <details id="engine-panel" class="engine-panel">
-      <summary><span>Engine room</span><span>Timing, replay &amp; verification <span aria-hidden="true">+</span></span></summary>
-      <div class="engine-content">
-        <div class="engine-explanation"><h2>Same voyage. Any frame rate.</h2><p>The simulation advances in fixed 1/60 second steps. Rendering blends the previous and current states. Change the render limit while playing to see the same game speed at a different visual frame rate.</p><p>Built from Assignment 2's tugboat, lighthouse, articulated crane, and wind turbines. Static scenery is cached; particles are bounded. No libraries, downloads, or build step are required.</p></div>
-        <div class="engine-settings"><label for="fps-limit">Render limit</label><select id="fps-limit"><option value="0">Display refresh rate</option><option value="15">15 FPS</option><option value="30">30 FPS</option><option value="60">60 FPS</option><option value="120">120 FPS</option></select><label class="check-label"><input id="interpolation" type="checkbox" checked> Interpolated rendering</label><label class="check-label"><input id="console-trace" type="checkbox"> Console timing trace (120 ticks)</label><dl class="telemetry"><div><dt>Render FPS</dt><dd id="fps">0</dd></div><div><dt>Updates / s</dt><dd id="ups">0</dd></div><div><dt>Simulation tick</dt><dd id="tick">0</dd></div><div><dt>Catch-up steps</dt><dd id="steps">0</dd></div></dl></div>
-        <div class="verification"><button id="verify">Verify deterministic timing</button><button id="replay" disabled>Replay last voyage</button><p id="verification-result" role="status">Run the same recorded inputs at 15, 30, 60, 144 FPS and an irregular schedule. Compare the full simulation state after every tick.</p><output id="verification-detail"></output></div>
-      </div>
-      <div class="references"><span>Course resources</span><a href="https://gameprogrammingpatterns.com/game-loop.html" target="_blank" rel="noreferrer">Game Loop</a><a href="https://www.isaacsukin.com/news/2015/01/detailed-explanation-javascript-game-loops-and-timing" target="_blank" rel="noreferrer">JavaScript Game Loops and Timing</a><a href="https://gafferongames.com/post/fix_your_timestep/" target="_blank" rel="noreferrer">Fix Your Timestep!</a></div>
-    </details>
-    <footer><span>NIGHT HARBOR</span><span>Assignment 03 · Building Your Own Game Engine, Part II</span><span>Vanilla JavaScript + Canvas 2D</span></footer>
+    <dialog id="settings">
+      <div class="dialog-heading"><h2>Settings</h2><button id="settings-close" aria-label="Close settings">Close</button></div>
+      <label for="fps-limit">Render limit</label>
+      <select id="fps-limit"><option value="0">Screen refresh rate</option><option value="15">15 FPS</option><option value="30">30 FPS</option><option value="60">60 FPS</option><option value="120">120 FPS</option></select>
+      <label class="check-label"><input id="interpolation" type="checkbox" checked> Smooth motion (interpolation)</label>
+      <label class="check-label"><input id="console-trace" type="checkbox"> Print the next 120 ticks to the console</label>
+      <p class="help">The game updates 60 times per second, even when the render limit is lower.</p>
+      <dl class="telemetry"><div><dt>Frames / second</dt><dd id="fps">0</dd></div><div><dt>Updates / second</dt><dd id="ups">0</dd></div><div><dt>Tick</dt><dd id="tick">0</dd></div><div><dt>Catch-up steps</dt><dd id="steps">0</dd></div></dl>
+      <div class="buttons"><button id="verify">Test timing</button><button id="replay" disabled>Replay my run</button></div>
+      <p id="verification-result" role="status">This checks that the same inputs give the same results at different frame rates.</p>
+      <output id="verification-detail"></output>
+    </dialog>
   </main>
   <script src="js/engine.js"></script>
   <script src="js/model.js"></script>

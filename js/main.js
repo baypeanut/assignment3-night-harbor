@@ -42,7 +42,7 @@
     if (mode !== "playing") return false;
     if (replaying && replayIndex >= savedRecording.length) {
       mode = "paused";
-      showOverlay("REPLAY FINISHED", "Voyage replayed.", "The recorded inputs have been reproduced using the same fixed simulation steps.", "Resume voyage");
+      showOverlay("", "Replay finished", "That was your recorded run. You can keep playing from here or restart.", "Keep playing");
       replaying = false;
       recording = savedRecording.slice();
       return false;
@@ -69,7 +69,7 @@
     element("overlay-title").textContent = title;
     element("overlay-copy").textContent = copy;
     element("start").textContent = label;
-    element("overlay-note").textContent = "WASD or arrows to steer · Space to brake · E to load or unload";
+    element("overlay-note").textContent = "WASD or arrows: move · Space: brake · E: pick up or deliver";
     element("overlay").hidden = false;
     element("pause").textContent = "Resume";
     dirty = true;
@@ -111,7 +111,7 @@
     if (mode === "playing") {
       mode = "paused";
       clearInput();
-      showOverlay("SHIFT ON HOLD", "Take a breath.", "Your cargo, hull, and shift timer are safe. Resume when you are ready.", "Resume voyage");
+      showOverlay("", "Paused", "The timer is stopped. Resume whenever you are ready.", "Resume");
     } else if (mode === "paused") resume();
   }
 
@@ -123,24 +123,21 @@
     replaying = false;
     element("pause").disabled = true;
     if (model.status === "won") {
-      const rank = model.collisions === 0 ? "HARBORMASTER" : "SHIFT COMPLETE";
-      showOverlay(wasReplay ? "REPLAY COMPLETE" : rank, "Home before dawn.", "All three shipments delivered. " + model.score + " points, " + model.boat.health + "% hull integrity, and " + Math.ceil(model.remaining) + " seconds to spare.", "Sail again");
+      showOverlay("", wasReplay ? "Replay finished" : "All crates delivered!", "Score: " + model.score + ". Hull: " + model.boat.health + "%. You had " + Math.ceil(model.remaining) + " seconds left.", "Play again");
     } else {
-      showOverlay("SHIFT ENDED", model.boat.health <= 0 ? "The tug needs repairs." : "Dawn has arrived.", model.delivered + " of 3 shipments delivered. Brake before docking and steer around the red buoys. Your next shift is a fresh start.", "Try again");
+      showOverlay("", model.boat.health <= 0 ? "Boat damaged" : "Time is up", "You delivered " + model.delivered + " of 3 crates. Try again and watch out for the buoys.", "Try again");
     }
   }
 
   function updateInterface() {
-    element("manifest").innerHTML = model.delivered + " <small>/ 3 delivered</small>";
+    element("manifest").textContent = model.delivered + " / 3";
     const seconds = Math.ceil(model.remaining);
     element("timer").textContent = String(Math.floor(seconds / 60)).padStart(2, "0") + ":" + String(seconds % 60).padStart(2, "0");
-    element("hull").innerHTML = model.boat.health + "<small>%</small>";
-    element("hull-fill").style.width = model.boat.health + "%";
-    element("hull-fill").style.background = model.boat.health < 40 ? "#db876c" : "#91cabc";
-    element("score").textContent = String(model.score).padStart(4, "0");
-    const message = replaying ? "Replaying your recorded voyage. Live steering is disabled." : mode === "ready" ? "Your tug is ready at the west berth." : model.prompt();
+    element("hull").textContent = model.boat.health + "%";
+    element("score").textContent = model.score;
+    const message = replaying ? "Replaying your run. Steering is off during the replay." : mode === "ready" ? "Your boat is at the dock." : model.prompt();
     if (lastMessage !== message) { element("message").textContent = message; lastMessage = message; }
-    element("cargo-status").textContent = model.boat.cargo === null ? "HOLD EMPTY" : "CARGO 0" + model.boat.cargo + " ABOARD";
+    element("cargo-status").textContent = model.boat.cargo === null ? "No crate aboard" : "Carrying crate " + model.boat.cargo;
     element("tick").textContent = model.tick;
     element("steps").textContent = maxCatchUp;
     element("replay").disabled = replaying || !(recording.length || savedRecording.length);
@@ -211,7 +208,7 @@
   });
   element("replay").addEventListener("click", () => {
     if (recording.length) savedRecording = recording.slice();
-    if (savedRecording.length) start(true);
+    if (savedRecording.length) { element("settings").close(); start(true); }
   });
   element("verify").addEventListener("click", () => {
     if (mode === "playing") pause();
@@ -222,7 +219,7 @@
         const tape = recording.length ? recording : savedRecording.length ? savedRecording : null;
         const result = HarborVerification.verifyTiming(tape);
         console.table(result.results);
-        element("verification-result").textContent = result.passed ? "PASS. Every simulation state matched at every tick across all five schedules." : "FAIL. A simulation mismatch was detected.";
+        element("verification-result").textContent = result.passed ? "Passed. All five frame rates produced the same state at every tick." : "Failed. The simulation states did not match.";
         element("verification-detail").textContent = result.results.map(row => row.schedule + ": " + row.ticks + " ticks, " + (row.passed ? "identical" : "mismatch at " + row.mismatch)).join("\n");
       } catch (error) {
         element("verification-result").textContent = "Verification failed: " + error.message;
@@ -239,6 +236,8 @@
     button.addEventListener("pointercancel", release);
     button.addEventListener("lostpointercapture", release);
   });
-  console.info("Night Harbor ready. Open Engine room for render limits, console timing traces, deterministic verification, and voyage replay.");
+  element("settings-open").addEventListener("click", () => { clearInput(); element("settings").showModal(); });
+  element("settings-close").addEventListener("click", () => { element("settings").close(); if (mode === "playing") canvas.focus({ preventScroll: true }); });
+  console.info("Night Harbor ready. Settings has frame-rate controls, console timing traces, a timing test, and replay.");
   requestAnimationFrame(frame);
 })();

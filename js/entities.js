@@ -42,8 +42,8 @@ class HarborRenderer {
     for (let x = 20; x < 265; x += 45) c.fillRect(x, 407, 9, 36);
     for (let x = 995; x < 1200; x += 45) c.fillRect(x, 412, 9, 29);
     c.fillStyle = "#b9bea7"; c.font = "10px monospace";
-    c.fillText("WEST BERTH / DELIVERIES", 20, 382);
-    c.fillText("EAST LOADING DOCK", 1024, 389);
+    c.fillText("DOCK", 20, 382);
+    c.fillText("LOADING AREA", 1024, 389);
   }
 
   circle(x, y, radius, color) {

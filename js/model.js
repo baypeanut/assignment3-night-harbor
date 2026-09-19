@@ -101,7 +101,7 @@
       this.delivered = 0;
       this.score = 0;
       this.collisions = 0;
-      this.message = "Find the gold cargo marker. Press E nearby to collect.";
+      this.message = "Go to a gold crate and press E to pick it up.";
       this.messageTicks = 240;
       this.boat = { x: 190, y: 482, vx: 0, vy: 0, heading: 1, wheelAngle: 0, flagPhase: 0, health: 100, invulnerable: 0, cargo: null };
       this.dock = { x: 190, y: 482, radius: 72 };
@@ -150,22 +150,22 @@
     }
 
     prompt() {
-      if (this.status === "won") return "All three shipments are home. The harbor is ready for dawn.";
-      if (this.status === "lost") return this.boat.health <= 0 ? "The tug needs repairs. Start a new voyage to try again." : "The shift has ended. Start a new voyage to try again.";
+      if (this.status === "won") return "All three crates delivered!";
+      if (this.status === "lost") return this.boat.health <= 0 ? "Your boat is too damaged. Press Restart to try again." : "Time is up. Press Restart to try again.";
       if (this.messageTicks > 0) return this.message;
       if (this.boat.cargo !== null) {
         if (Math.hypot(this.boat.x - this.dock.x, this.boat.y - this.dock.y) < this.dock.radius) return "Hold Space to brake, then press E to deliver.";
-        return "Cargo aboard. Return to the green berth on the left.";
+        return "Bring the crate to the green circle on the left.";
       }
       const next = this.cargo.find(cargo => cargo.state === "waiting");
-      return next ? "Collect any gold cargo marker with E. Avoid the red channel buoys." : "All cargo is delivered.";
+      return next ? "Pick up a gold crate with E. Avoid the red buoys." : "All crates delivered.";
     }
 
     interact() {
       const boat = this.boat;
       if (boat.cargo !== null) {
         if (Math.hypot(boat.x - this.dock.x, boat.y - this.dock.y) > this.dock.radius) {
-          this.notify("Return to the green berth to unload.");
+          this.notify("Go back to the green circle to unload.");
         } else if (Math.hypot(boat.vx, boat.vy) > 45) {
           this.notify("Too fast to dock. Hold Space to brake.");
         } else {
@@ -173,7 +173,7 @@
           boat.cargo = null;
           this.delivered += 1;
           this.score += 1000;
-          this.notify("Delivery secured. " + this.delivered + " of 3 shipments home.");
+          this.notify("Delivered! " + this.delivered + " of 3 crates done.");
           if (this.delivered === 3) {
             this.status = "won";
             this.score += Math.floor(this.remaining) * 10 + boat.health * 5;
@@ -193,9 +193,9 @@
       if (closest) {
         closest.state = "aboard";
         boat.cargo = closest.id;
-        this.notify(closest.name + " aboard. Return to the green berth.");
+        this.notify("Crate " + closest.id + " picked up. Take it back to the dock.");
       } else {
-        this.notify("Move closer to a gold cargo marker to collect it.");
+        this.notify("Move closer to a gold crate first.");
       }
     }
 
@@ -285,7 +285,7 @@
             boat.health = Math.max(0, boat.health - 16);
             boat.invulnerable = 1.5;
             this.collisions += 1;
-            this.notify("Channel buoy struck. Hull damaged. Steer clear of the red lights.");
+            this.notify("You hit a buoy. Watch your hull!");
           }
         }
       }
