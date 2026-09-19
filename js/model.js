@@ -122,6 +122,15 @@
       boat.wheelAngle += Math.hypot(boat.vx, boat.vy) * dt / 13;
       boat.flagPhase += dt * 5.2;
       boat.invulnerable = Math.max(0, boat.invulnerable - dt);
+      this.lighthouse.beamAngle += dt * 0.42;
+      this.crane.boomAngle = -0.48 + Math.sin(this.time * 0.55) * 0.2;
+      this.crane.hookSwing = Math.sin(this.time * 1.7) * 0.16;
+      this.crane.cableLength = 80 + Math.sin(this.time * 0.9) * 16;
+      for (const turbine of this.turbines) turbine.bladeAngle += turbine.speed * dt;
+      for (const buoy of this.buoys) {
+        buoy.x = buoy.baseX + Math.sin(this.time * 0.55 + buoy.phase) * 24;
+        buoy.y = buoy.baseY + Math.sin(this.time * 0.8 + buoy.phase) * 8;
+      }
       boat.x = clamp(boat.x, 72, WIDTH - 72);
       boat.y = clamp(boat.y, 444, HEIGHT - 38);
       if (boat.health <= 0 || this.remaining <= 0) this.status = "lost";
