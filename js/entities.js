@@ -123,12 +123,44 @@ class HarborRenderer {
     c.beginPath(); c.moveTo(-12, -13); c.lineTo(12, 9); c.moveTo(12, -13); c.lineTo(-12, 9); c.stroke(); c.restore();
   }
 
-  draw(model, alpha) {
+  draw(model, alpha, target = null) {
+    const c = this.ctx;
     const view = model.visual(alpha);
-    this.ctx.drawImage(this.background, 0, 0);
+    const time = view.time;
+    c.drawImage(this.background, 0, 0);
+    c.save(); c.strokeStyle = "#a2c9d01b"; c.lineWidth = 1;
+    for (let row = 0; row < 12; row++) {
+      c.beginPath();
+      for (let x = 0; x <= 1200; x += 20) { const y = 433 + row * 19 + Math.sin(x * 0.025 + time * 1.8 + row) * 3; if (x === 0) c.moveTo(x, y); else c.lineTo(x, y); }
+      c.stroke();
+    }
+    c.restore();
     this.lighthouse(view.lighthouse);
     for (const turbine of view.turbines) this.turbine(turbine);
     this.crane(view.crane);
-    this.boat(view.boat, view.time);
+    c.save(); c.strokeStyle = "#8fd2b7"; c.fillStyle = "#8fd2b70b"; c.lineWidth = 1.5; c.setLineDash([7, 7]);
+    c.beginPath(); c.ellipse(model.dock.x, model.dock.y, 73, 34, 0, 0, Math.PI * 2); c.fill(); c.stroke(); c.setLineDash([]);
+    c.fillStyle = "#acdbc5"; c.font = "10px monospace"; c.textAlign = "center"; c.fillText("DELIVER HERE [E]", model.dock.x, model.dock.y + 51); c.restore();
+    for (const cargo of model.cargo) {
+      if (cargo.state !== "waiting") continue;
+      const y = cargo.y + Math.sin(time * 2 + cargo.id) * 3;
+      c.save(); c.strokeStyle = "#dbb96f88"; c.setLineDash([3, 5]); c.beginPath(); c.ellipse(cargo.x, cargo.y + 5, 31, 15, 0, 0, Math.PI * 2); c.stroke(); c.restore();
+      this.crate(cargo.x, y);
+      c.fillStyle = "#efd599"; c.font = "10px monospace"; c.textAlign = "center"; c.fillText("0" + cargo.id + " / CARGO", cargo.x, y - 27);
+    }
+    for (const buoy of view.buoys) {
+      c.save(); c.translate(buoy.x, buoy.y); c.rotate(Math.sin(time * 2 + buoy.phase) * 0.09);
+      c.fillStyle = "#263e46"; c.beginPath(); c.ellipse(0, 9, 20, 7, 0, 0, Math.PI * 2); c.fill();
+      c.fillStyle = "#c57661"; c.beginPath(); c.moveTo(-10, 5); c.lineTo(-5, -22); c.lineTo(5, -22); c.lineTo(10, 5); c.fill();
+      c.fillStyle = "#e1d3b3"; c.fillRect(-8, -4, 16, 5);
+      this.circle(0, -24, 4, Math.sin(time * 3 + buoy.phase) > 0 ? "#ffe0a0" : "#bc7161"); c.restore();
+    }
+    for (const wake of model.wake) {
+      c.strokeStyle = "rgba(175,215,214," + wake.life * 0.12 + ")"; c.beginPath(); c.ellipse(wake.x, wake.y, 14 + (1.2 - wake.life) * 20, 3 + (1.2 - wake.life) * 6, 0, 0, Math.PI * 2); c.stroke();
+    }
+    for (const puff of model.smoke) { c.save(); c.globalAlpha = Math.max(0, puff.life / 1.8) * 0.3; this.circle(Harbor.lerp(puff.px, puff.x, alpha), Harbor.lerp(puff.py, puff.y, alpha), puff.size, "#c0ced0"); c.restore(); }
+    this.boat(view.boat, time);
+    if (target) { c.save(); c.strokeStyle = "#b7d9ce88"; c.setLineDash([3, 5]); c.beginPath(); c.arc(target.x, target.y, 14, 0, Math.PI * 2); c.stroke(); c.restore(); }
+    c.textAlign = "left";
   }
 }
