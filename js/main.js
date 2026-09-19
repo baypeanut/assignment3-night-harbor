@@ -164,8 +164,9 @@
       }
       updateInterface();
       sampleFrames += 1;
-      if (interval && Number.isFinite(lastRender)) lastRender = timestamp - ((timestamp - lastRender) % interval);
-      else lastRender = timestamp;
+      if (interval && Number.isFinite(lastRender) && timestamp - lastRender + 0.1 >= interval) {
+        lastRender += Math.floor((timestamp - lastRender + 0.1) / interval) * interval;
+      } else lastRender = timestamp;
       dirty = false;
     }
     if (timestamp - lastSample >= 1000) {

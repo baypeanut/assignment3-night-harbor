@@ -4,6 +4,6 @@
   "private": true,
   "description": "Night Harbor cargo game with fixed-step simulation, interpolated rendering and deterministic replay",
   "scripts": {
-    "test": "node tests/verify.cjs"
+    "test": "node tests/verify.cjs && node tests/runtime.cjs"
   }
 }
