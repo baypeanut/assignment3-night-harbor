@@ -90,11 +90,45 @@ class HarborRenderer {
     c.restore(); c.restore(); c.restore();
   }
 
+  wheel(x, angle) {
+    const c = this.ctx;
+    c.save(); c.translate(x, 10); c.rotate(angle);
+    this.circle(0, 0, 16, "#122b37");
+    c.strokeStyle = "#a4b9bb"; c.lineWidth = 3;
+    c.beginPath(); c.arc(0, 0, 16, 0, Math.PI * 2); c.moveTo(-14, 0); c.lineTo(14, 0); c.moveTo(0, -14); c.lineTo(0, 14); c.stroke(); c.restore();
+  }
+
+  boat(boat, time) {
+    const c = this.ctx;
+    c.save(); c.translate(boat.x, boat.y); c.scale(boat.heading * 0.82, 0.82); c.rotate(Math.sin(time * 2.3) * 0.018);
+    if (boat.invulnerable > 0 && Math.floor(time * 10) % 2 === 0) c.globalAlpha = 0.55;
+    c.fillStyle = "#c87543"; c.beginPath(); c.moveTo(-70, 0); c.lineTo(70, 0); c.lineTo(54, 28); c.lineTo(-52, 28); c.closePath(); c.fill();
+    c.fillStyle = "#efc786"; c.fillRect(-67, -3, 133, 5);
+    c.fillStyle = "#e9d6af"; c.fillRect(-20, -28, 48, 28);
+    c.fillStyle = "#182f3c"; c.fillRect(-16, -24, 17, 15); c.fillRect(7, -24, 17, 15);
+    c.fillStyle = "#354b56"; c.fillRect(-24, -33, 57, 6); c.fillRect(18, -52, 14, 23);
+    c.fillStyle = "#d39f5b"; c.fillRect(17, -54, 16, 6);
+    this.wheel(-34, boat.wheelAngle); this.wheel(34, boat.wheelAngle);
+    c.save(); c.translate(-8, -33); c.strokeStyle = "#bfcdca"; c.lineWidth = 2; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -40); c.stroke();
+    c.translate(0, -40); c.fillStyle = "#d87562"; c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(16 + Math.sin(boat.flagPhase) * 5, 7, 30, 3); c.quadraticCurveTo(17, 20, 0, 13); c.fill(); c.restore();
+    if (boat.cargo !== null) this.crate(-48, -16, 0.75);
+    c.restore();
+  }
+
+  crate(x, y, scale = 1) {
+    const c = this.ctx;
+    c.save(); c.translate(x, y); c.scale(scale, scale);
+    c.fillStyle = "#b68f4a"; c.fillRect(-14, -15, 28, 26);
+    c.strokeStyle = "#e7c980"; c.lineWidth = 2; c.strokeRect(-14, -15, 28, 26);
+    c.beginPath(); c.moveTo(-12, -13); c.lineTo(12, 9); c.moveTo(12, -13); c.lineTo(-12, 9); c.stroke(); c.restore();
+  }
+
   draw(model, alpha) {
     const view = model.visual(alpha);
     this.ctx.drawImage(this.background, 0, 0);
     this.lighthouse(view.lighthouse);
     for (const turbine of view.turbines) this.turbine(turbine);
     this.crane(view.crane);
+    this.boat(view.boat, view.time);
   }
 }
